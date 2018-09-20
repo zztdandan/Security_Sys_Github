@@ -1,0 +1,224 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+
+using LGWBVerifySystem;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+namespace AppBox.Model
+{
+    /// <summary>
+    /// 危险源管理主表
+    /// </summary>
+    [Table("SAFE.TR_THAZA01")]
+    public class TR_THAZA01
+    {
+        [Key]
+        [Required]
+        [Display(Name = "危险源数据表序列功能主键")]
+        public int ID { get; set; }
+
+        /// <summary>
+        /// 这个主键每条风险数据的历史、现在、审核共享同一个风险主键
+        /// </summary>
+        [Display(Name = "危险源主键"), Column(TypeName = "NVARCHAR2"), MaxLength(8)]
+        public string HAZA_ID { get; set; }
+        [Display(Name = "危险源名称"), Column(TypeName = "NVARCHAR2"), MaxLength(50)]
+        public string HAZA_NAME { get; set; }
+
+        [Display(Name = "危险源危险区域"), Column(TypeName = "NVARCHAR2"), MaxLength(100)]
+        public string HAZA_LOCA { get; set; }
+        [Display(Name = "危险源录入单位"), Column(TypeName = "NVARCHAR2"), MaxLength(64)]
+        public string HAZA_DEPT { get; set; }
+
+        [Display(Name = "危险源评级"), Column(TypeName = "NVARCHAR2"), MaxLength(10)]
+        public string HAZA_LVL { get; set; }
+
+        [Display(Name = "危险源录入人"), Column(TypeName = "NVARCHAR2"), MaxLength(64)]
+        public string REC_CREATOR { get; set; }
+
+        [Display(Name = "危险源录入时间"), Column(TypeName = "NVARCHAR2"), MaxLength(14)]
+        public string REC_CREATETIME { get; set; }
+        /// <summary>
+        /// 危险源数据属性，1审批 2 显示 3 历史
+        /// </summary>
+        [Display(Name = "危险源数据属性"), Column(TypeName = "NVARCHAR2"), MaxLength(8)]
+        public string HAZA_CATEGORY { get; set; }
+        [NotMapped]
+        public string HAZA_LVL_S { get { return this.HAZA_LVL.ToString(); } set { this.HAZA_LVL_S = this.HAZA_LVL.ToString(); } }
+
+        [Display(Name = "危险源包含风险"), Column(TypeName = "NVARCHAR2"), MaxLength(500)]
+        public string HAZA_RISK_String { get; set; }
+
+
+        public List<TR_TRISK01> GetRiskList()
+        {
+            if (this.RISKLIST.Count == 0)
+            {
+                var db = new SAFEDB();
+                var arr = this.HAZA_RISK_String.Split(',');
+                var res = (from x in db.TR_TRISK01
+                           where arr.Contains(x.RISK_ID)
+                           select x).ToList();
+                return res;
+            }
+            else return this.RISKLIST;
+
+        }
+        public static TR_THAZA01 FindByID(int id_value)
+        {
+            var db = new SAFEDB();
+            var res = (from x in db.TR_THAZA01
+                       where x.ID == id_value
+                       select x).FirstOrDefault();
+            return res;
+        }
+
+        /// <summary>
+        /// 列出同一HAZAID（表示同类）的危险源
+        /// </summary>
+        /// <param name="haza_id"></param>
+        /// <returns></returns>
+        public static List<TR_THAZA01> GetListByEntityID(string haza_id)
+        {
+            var db = new SAFEDB();
+            var res = (from x in db.TR_THAZA01
+                       where x.HAZA_ID == haza_id
+                       select x).ToList();
+            return res;
+        }
+        public CSException SetStats(string stats)
+        {
+            try
+            {
+                var db = new SAFEDB();
+                var res = (from x in db.TR_THAZA01
+                           where x.ID == this.ID
+                           select x).FirstOrDefault();
+                var delstring = EP_TEPEP01.GetDicByCName("危险源数据状态").Where(x => x.Value == stats).FirstOrDefault().Key;
+                res.HAZA_CATEGORY = delstring;
+                db.SaveChanges();
+                return new CSException();
+            }
+            catch (Exception ex)
+            {
+                return new CSException(ex.Message);
+            }
+
+        }
+
+        [NotMapped]
+        public List<TR_TRISK01> RISKLIST { get; set; }
+        public CSException Fill_RiskString()
+        {
+            try
+            {
+                if (this.RISKLIST.Count == 0)
+                {
+                    throw new Exception("没有risk可以填充");
+                }
+
+                this.HAZA_RISK_String = "";
+                foreach (var risk in this.RISKLIST)
+                {
+                    if (this.HAZA_RISK_String == "")
+                    {
+                        this.HAZA_RISK_String = risk.RISK_ID;
+                    }
+                    else
+                    {
+                        this.HAZA_RISK_String = this.HAZA_RISK_String + "," + risk.RISK_ID;
+                    }
+                }
+                return new CSException();
+            }
+            catch (Exception ex)
+            {
+                return new CSException(ex.Message);
+            }
+
+        }
+        public TR_THAZA01(string newstring)
+        {
+            if (newstring == "new")
+            {
+                var db = new SAFEDB();
+                var maxID = (from x in db.TR_THAZA01
+                             orderby x.ID descending
+                             select x).First().ID;
+                this.ID = maxID + 1;
+                var _haza_id = Guid.NewGuid().ToString("N").Substring(0, 8);
+                this.HAZA_ID = _haza_id;
+                this.REC_CREATETIME = DateTime.Now.ToString("yyyyMMddHHmmss");
+                var re = this.SetStats("审核");
+
+            }
+            else if (newstring == "insert")
+            {
+                var db = new SAFEDB();
+                var maxID = (from x in db.TR_THAZA01
+                             orderby x.ID descending
+                             select x).First().ID;
+                this.ID = maxID + 1;
+                var _haza_id = Guid.NewGuid().ToString("N").Substring(0, 8);
+                this.HAZA_ID = _haza_id;
+                this.REC_CREATETIME = DateTime.Now.ToString("yyyyMMddHHmmss");
+                var re = this.SetStats("正式");
+            }
+            {
+                throw new Exception("不是新建命令");
+            }
+
+        }
+        public TR_THAZA01(string editstring,string haza_id)
+        {
+            var new_haza = new TR_THAZA01("new");
+            this.REC_CREATETIME = new_haza.REC_CREATETIME;
+            this.ID = new_haza.ID;
+            this.HAZA_CATEGORY = new_haza.HAZA_CATEGORY;
+            this.HAZA_ID = haza_id;
+
+
+        }
+
+<<<<<<< .merge_file_a08568
+        public CSException SaveEdit()
+        {
+            try
+            {
+                var db = new SAFEDB();
+                var haza_enti = (from x in db.TR_THAZA01
+                                 where x.ID == this.ID
+                                 select x).FirstOrDefault();
+                haza_enti = this;
+                db.SaveChanges();
+                return new CSException();
+            }
+            catch (Exception ex)
+            {
+                return new CSException(ex.Message);
+            }
+          
+
+        }
+
+        public CSException AddNew()
+        {
+            try
+            {
+
+                var db =new SAFEDB();
+                db.TR_THAZA01.Add(this);
+                return new CSException();
+            }
+            catch (Exception ex)
+            {
+                return new CSException(ex.Message);
+            }
+        }
+=======
+        public TR_THAZA01() { }
+>>>>>>> .merge_file_a07484
+    }
+}

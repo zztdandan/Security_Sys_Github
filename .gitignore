@@ -1,0 +1,24 @@
+1.txt
+.svn/
+.vs/AppBox/v15/Server/sqlite3/db.lock
+.vs/AppBox/v15/Server/sqlite3/storage.ide
+.vs/AppBox/v15/Server/sqlite3/storage.ide-shm
+.vs/AppBox/v15/Server/sqlite3/storage.ide-wal
+.vs/AppBox/v15/.suo
+.vs/config/applicationhost.config
+admin/
+ALERT/
+App_Data/
+bin/
+Business/
+extjs/
+Migrations/
+obj/
+packages/
+Properties/
+RelatedUnit/
+res/
+Service References/
+soft/
+VIEW_MODEL/
+Web References/
